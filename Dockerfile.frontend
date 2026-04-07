@@ -1,0 +1,5 @@
+FROM nginx:1.27-alpine
+
+COPY frontend/pages /usr/share/nginx/html
+
+EXPOSE 80

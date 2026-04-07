@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Janam Operations Console</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, sans-serif; background: #0f1115; color: #e8eef7; }
+    .app { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 8px; }
+    .muted { color: #a9b8cc; margin-bottom: 16px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .card { background: #171b23; border: 1px solid #2a3444; border-radius: 12px; padding: 14px; }
+    label { display: block; font-size: 12px; color: #a9b8cc; margin-bottom: 6px; }
+    input, textarea, select, button { width: 100%; border-radius: 8px; border: 1px solid #2f3b4f; background: #0f141d; color: #e8eef7; padding: 9px; }
+    textarea { min-height: 100px; resize: vertical; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .btn-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+    button { cursor: pointer; background: #1d365a; }
+    button:hover { background: #244777; }
+    pre { margin: 0; white-space: pre-wrap; word-break: break-word; background: #0f141d; border: 1px solid #2f3b4f; border-radius: 8px; padding: 10px; min-height: 180px; }
+    .metric { border: 1px solid #2f3b4f; border-radius: 8px; padding: 10px; background: #0f141d; }
+    .metric .k { color: #a9b8cc; font-size: 12px; }
+    .metric .v { font-size: 20px; font-weight: 700; margin-top: 4px; }
+    .danger-banner { border-radius: 8px; padding: 10px; border: 1px solid #2f3b4f; background: #161f2e; font-weight: 600; margin-top: 10px; }
+    .pill { display: inline-block; font-size: 12px; color: #a9b8cc; margin-left: 8px; }
+    @media (max-width: 1100px) { .grid, .row, .row-4, .btn-row, .grid-3 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Janam Operations Console</h1>
+    <p class="muted">Janam turns incident reports into real-time danger-zone intelligence so responders can act faster and communities stay safer.</p>
+
+    <section class="card">
+      <div class="row-4">
+        <div>
+          <label for="apiBase">API Base URL</label>
+          <input id="apiBase" value="http://localhost:8000">
+        </div>
+        <div>
+          <label for="apiKey">X-API-Key</label>
+          <input id="apiKey" value="janam-dev-key">
+        </div>
+        <div>
+          <label for="requestId">Request ID (optional)</label>
+          <input id="requestId" placeholder="auto-generated when empty">
+        </div>
+        <div>
+          <label for="defaultLimit">Default Limit</label>
+          <input id="defaultLimit" type="number" min="1" max="200" value="25">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button id="btnHealth">Health</button>
+        <button id="btnFormats">Formats</button>
+        <button id="btnListReports">List Reports</button>
+        <button id="btnGetAlerts">Get Alerts</button>
+      </div>
+    </section>
+
+    <section class="grid" style="margin-top:16px;">
+      <div class="card">
+        <label for="reportText">Incident Report</label>
+        <textarea id="reportText">Gun attack reported near downtown.</textarea>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label for="reportType">Report type</label>
+            <select id="reportType">
+              <option value="text">text</option>
+              <option value="audio">audio</option>
+              <option value="video">video</option>
+            </select>
+          </div>
+          <div>
+            <label for="location">Location</label>
+            <input id="location" value="zone-a">
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label for="source">Source</label>
+          <input id="source" value="citizen-hotline">
+        </div>
+        <div class="btn-row">
+          <button id="btnAnalyze">Analyze (typed)</button>
+          <button id="btnAnalyzeText">Analyze Text</button>
+          <button id="btnAnalyzeAudio">Analyze Audio</button>
+          <button id="btnAnalyzeVideo">Analyze Video</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <label>Investigation Query</label>
+        <div class="row">
+          <div>
+            <label for="searchQ">Search term</label>
+            <input id="searchQ" placeholder="e.g. attack, theft, zone-a">
+          </div>
+          <div>
+            <label for="searchSeverity">Severity</label>
+            <select id="searchSeverity">
+              <option value="">any</option>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label for="searchType">Type</label>
+            <select id="searchType">
+              <option value="">any</option>
+              <option value="text">text</option>
+              <option value="audio">audio</option>
+              <option value="video">video</option>
+            </select>
+          </div>
+          <div>
+            <label for="reportId">Get report by ID</label>
+            <input id="reportId" type="number" min="1" placeholder="e.g. 12">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="btnSearch">Search Reports</button>
+          <button id="btnGetReport">Get Report</button>
+          <button id="btnClearOutput">Clear Output</button>
+          <button id="btnRefreshIntel">Refresh Intel</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid" style="margin-top:16px;">
+      <div class="card">
+        <label>Real-time Streams</label>
+        <div class="btn-row">
+          <button id="btnWsUpdates">Connect /ws/updates</button>
+          <button id="btnWsAlerts">Connect /ws/alerts</button>
+          <button id="btnWsInit">Send WS init</button>
+          <button id="btnWsClose">Close WS</button>
+        </div>
+        <div style="margin-top:10px;">
+          <label for="wsPayload">/ws/updates payload</label>
+          <textarea id="wsPayload">Armed robbery escalation near bus station.</textarea>
+        </div>
+        <div class="btn-row">
+          <button id="btnWsSendPayload">Send payload</button>
+        </div>
+        <p class="muted" style="margin:8px 0 0;">Use read key for /ws/alerts and write key for /ws/updates.</p>
+      </div>
+
+      <div class="card">
+        <label>Danger Zone Board <span class="pill" id="liveStatus">live: idle</span></label>
+        <div class="grid-3">
+          <div class="metric">
+            <div class="k">High</div>
+            <div class="v" id="countHigh">0</div>
+          </div>
+          <div class="metric">
+            <div class="k">Medium</div>
+            <div class="v" id="countMedium">0</div>
+          </div>
+          <div class="metric">
+            <div class="k">Low</div>
+            <div class="v" id="countLow">0</div>
+          </div>
+        </div>
+        <div class="danger-banner" id="dangerBanner">No active danger trend yet.</div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <label>Operations Output</label>
+      <pre id="output"></pre>
+    </section>
+  </main>
+
+  <script type="module" src="/demos/janam.js"></script>
+</body>
+</html>
