@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import hmac
 from pathlib import Path
 import json
 import logging
 import sqlite3
+import time
 
 from fastapi.testclient import TestClient
 
@@ -12,6 +15,7 @@ from backend.main import create_app
 
 TEST_WRITE_API_KEY = "test-write-key"
 TEST_READ_API_KEY = "test-read-key"
+TEST_N8N_WEBHOOK_SECRET = "test-n8n-secret"
 
 
 def _auth_headers(role: str = "write") -> dict[str, str]:
@@ -23,6 +27,20 @@ def _set_auth_env(monkeypatch) -> None:
     monkeypatch.setenv("JANAM_API_KEY", TEST_WRITE_API_KEY)
     monkeypatch.setenv("JANAM_WRITE_API_KEY", TEST_WRITE_API_KEY)
     monkeypatch.setenv("JANAM_READ_API_KEY", TEST_READ_API_KEY)
+
+
+def _signed_n8n_headers(payload: dict[str, object], *, role: str = "write") -> dict[str, str]:
+    serialized = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    timestamp = str(int(time.time()))
+    signature = hmac.new(
+        TEST_N8N_WEBHOOK_SECRET.encode("utf-8"),
+        f"{timestamp}.".encode("utf-8") + serialized,
+        hashlib.sha256,
+    ).hexdigest()
+    headers = _auth_headers(role=role)
+    headers["X-Janam-Webhook-Timestamp"] = timestamp
+    headers["X-Janam-Webhook-Signature"] = f"sha256={signature}"
+    return headers
 
 
 def test_health_endpoint(tmp_path: Path, monkeypatch) -> None:
@@ -42,7 +60,7 @@ def test_formats_endpoint(tmp_path: Path, monkeypatch) -> None:
     with TestClient(app) as client:
         response = client.get("/formats", headers=_auth_headers(role="read"))
         assert response.status_code == 200
-        assert response.json() == {"supported_formats": ["audio", "text", "video"]}
+        assert response.json() == {"supported_formats": ["audio", "image", "text", "video"]}
 
 
 def test_analyze_text_endpoint_persists_report(tmp_path: Path, monkeypatch) -> None:
@@ -57,6 +75,8 @@ def test_analyze_text_endpoint_persists_report(tmp_path: Path, monkeypatch) -> N
                 "report_type": "text",
                 "source": "camera-1",
                 "location": "zone-a",
+                "latitude": 6.5244,
+                "longitude": 3.3792,
             },
             headers=_auth_headers(),
         )
@@ -66,12 +86,16 @@ def test_analyze_text_endpoint_persists_report(tmp_path: Path, monkeypatch) -> N
         assert payload["analysis"]["severity"] == "high"
         assert payload["analysis"]["danger_zone"] == "red"
         assert payload["source"] == "camera-1"
+        assert payload["latitude"] == 6.5244
+        assert payload["longitude"] == 3.3792
 
         report_id = payload["id"]
         fetch = client.get(f"/reports/{report_id}", headers=_auth_headers())
         assert fetch.status_code == 200
         assert fetch.json()["id"] == report_id
         assert fetch.json()["location"] == "zone-a"
+        assert fetch.json()["latitude"] == 6.5244
+        assert fetch.json()["longitude"] == 3.3792
 
 
 def test_list_reports_returns_saved_entries(tmp_path: Path, monkeypatch) -> None:
@@ -87,6 +111,197 @@ def test_list_reports_returns_saved_entries(tmp_path: Path, monkeypatch) -> None
         response = client.get("/reports", headers=_auth_headers(role="read"))
         assert response.status_code == 200
         assert len(response.json()) == 1
+
+
+def test_upload_endpoint_stores_media_metadata(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.post(
+            "/reports/upload",
+            headers=_auth_headers(),
+            files={"file": ("street.jpg", b"fake-image-bytes", "image/jpeg")},
+            data={
+                "source": "citizen-phone",
+                "location": "zone-c",
+                "latitude": "6.5500",
+                "longitude": "3.3500",
+                "note": "Image shows suspicious behavior.",
+            },
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["report_type"] == "image"
+        assert payload["location"] == "zone-c"
+        assert payload["latitude"] == 6.55
+        assert payload["longitude"] == 3.35
+        assert payload["extraction"]["upload"]["filename"] == "street.jpg"
+        assert payload["extraction"]["upload"]["content_type"] == "image/jpeg"
+        assert payload["extraction"]["upload"]["size_bytes"] == len(b"fake-image-bytes")
+
+
+def test_ingest_event_from_connector_persists_and_alerts(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.post(
+            "/ingest/events",
+            json={
+                "platform": "whatsapp-bridge",
+                "channel_id": "community-group-1",
+                "sender_id": "user-88",
+                "message_text": "Armed attack with gun near central station.",
+                "media_type": "text",
+                "location": "central-station",
+                "latitude": 6.45,
+                "longitude": 3.41,
+                "external_event_id": "wa-msg-9988",
+                "raw_payload": {"kind": "message", "priority": "urgent"},
+            },
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["source"] == "whatsapp-bridge:anonymous"
+        assert payload["analysis"]["severity"] == "high"
+        assert payload["extraction"]["ingest"]["platform"] == "whatsapp-bridge"
+        assert payload["extraction"]["ingest"]["anonymous_mode"] is True
+        assert payload["extraction"]["ingest"]["external_event_fingerprint"] is not None
+        assert payload["extraction"]["ingest"]["sender_fingerprint"] is not None
+        assert payload["extraction"]["ingest"]["channel_fingerprint"] is not None
+        assert payload["latitude"] == round(6.45, 3)
+        assert payload["longitude"] == round(3.41, 3)
+
+        alerts_response = client.get("/alerts", headers=_auth_headers(role="read"))
+        assert alerts_response.status_code == 200
+        alerts = alerts_response.json()
+        assert any(event["report_id"] == payload["id"] for event in alerts)
+
+
+def test_ingest_event_requires_text_or_media_url(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.post(
+            "/ingest/events",
+            json={"platform": "signal-bridge", "media_type": "audio"},
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 400
+
+
+def test_ingest_n8n_payload_normalization(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    monkeypatch.setenv("JANAM_N8N_WEBHOOK_SECRET", TEST_N8N_WEBHOOK_SECRET)
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        payload = {
+            "provider": "signal-bridge",
+            "chatId": "community-alerts",
+            "author": "user-11",
+            "text": "Gun attack near junction.",
+            "type": "text",
+            "lat": "6.4501",
+            "lng": "3.4202",
+            "eventId": "sig-11",
+        }
+        response = client.post(
+            "/ingest/n8n",
+            json=payload,
+            headers=_signed_n8n_headers(payload),
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["source"] == "signal-bridge:anonymous"
+        assert payload["latitude"] == round(6.4501, 3)
+        assert payload["longitude"] == round(3.4202, 3)
+        assert payload["extraction"]["ingest"]["channel_fingerprint"] is not None
+        assert payload["extraction"]["ingest"]["sender_fingerprint"] is not None
+        assert payload["extraction"]["ingest"]["external_event_fingerprint"] is not None
+
+
+def test_ingest_event_can_opt_out_of_anonymization(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.post(
+            "/ingest/events",
+            json={
+                "platform": "matrix-bridge",
+                "channel_id": "ops-room",
+                "sender_id": "operator-1",
+                "message_text": "Gun attack near station.",
+                "media_type": "text",
+                "anonymous_mode": False,
+            },
+            headers=_auth_headers(),
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["source"] == "matrix-bridge:ops-room"
+        assert payload["extraction"]["ingest"]["channel_id"] == "ops-room"
+        assert payload["extraction"]["ingest"]["sender_id"] == "operator-1"
+
+
+def test_ingest_n8n_rejects_invalid_signature(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    monkeypatch.setenv("JANAM_N8N_WEBHOOK_SECRET", TEST_N8N_WEBHOOK_SECRET)
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        payload = {"provider": "signal-bridge", "text": "Gun attack near junction.", "type": "text"}
+        headers = _signed_n8n_headers(payload)
+        headers["X-Janam-Webhook-Signature"] = "sha256=invalid"
+        response = client.post("/ingest/n8n", json=payload, headers=headers)
+        assert response.status_code == 401
+
+
+def test_ingest_n8n_rejects_missing_signature_headers(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    monkeypatch.setenv("JANAM_N8N_WEBHOOK_SECRET", TEST_N8N_WEBHOOK_SECRET)
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        payload = {"provider": "signal-bridge", "text": "Gun attack near junction.", "type": "text"}
+        response = client.post("/ingest/n8n", json=payload, headers=_auth_headers())
+        assert response.status_code == 401
+
+
+def test_location_analytics_aggregates_by_location(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        client.post(
+            "/reports/text",
+            json={"report": "Gun attack with weapon.", "report_type": "text", "location": "zone-a", "latitude": 6.1, "longitude": 3.1},
+            headers=_auth_headers(),
+        )
+        client.post(
+            "/reports/text",
+            json={"report": "Routine neighborhood patrol update.", "report_type": "text", "location": "zone-a", "latitude": 6.1001, "longitude": 3.1001},
+            headers=_auth_headers(),
+        )
+        client.post(
+            "/reports/text",
+            json={"report": "Burglary reported at night.", "report_type": "text", "location": "zone-b"},
+            headers=_auth_headers(),
+        )
+
+        response = client.get("/analytics/locations", headers=_auth_headers(role="read"))
+        assert response.status_code == 200
+        payload = response.json()
+        zone_a = next((item for item in payload if item["location"] == "zone-a"), None)
+        assert zone_a is not None
+        assert zone_a["total_reports"] == 2
+        assert zone_a["high_count"] >= 1
+        assert zone_a["latitude"] is not None
+        assert zone_a["longitude"] is not None
 
 
 def test_logging_writes_to_file(tmp_path: Path, monkeypatch) -> None:
@@ -164,6 +379,27 @@ def test_websocket_alert_stream_receives_alert_event(tmp_path: Path, monkeypatch
             assert event["report_id"] == create_response.json()["id"]
 
 
+def test_websocket_case_stream_receives_new_report(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
+    _set_auth_env(monkeypatch)
+    app = create_app()
+    with TestClient(app) as client:
+        with client.websocket_connect(f"/ws/cases?api_key={TEST_READ_API_KEY}") as websocket:
+            connected = websocket.receive_json()
+            assert connected["event"] == "connected"
+
+            create_response = client.post(
+                "/reports/analyze",
+                json={"report": "Armed attack near station.", "report_type": "text", "location": "station"},
+                headers=_auth_headers(),
+            )
+            assert create_response.status_code == 200
+
+            event = websocket.receive_json()
+            assert event["event"] == "case"
+            assert event["report"]["id"] == create_response.json()["id"]
+
+
 def test_report_search_by_query_and_location(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("JANAM_DB_PATH", str(tmp_path / "janam.sqlite3"))
     _set_auth_env(monkeypatch)
@@ -228,6 +464,7 @@ def test_reports_table_has_search_indexes(tmp_path: Path, monkeypatch) -> None:
     assert "idx_reports_location" in index_names
     assert "idx_reports_source" in index_names
     assert "idx_reports_created_at" in index_names
+    assert "idx_reports_lat_lon" in index_names
 
 
 def test_request_id_header_and_log_correlation(tmp_path: Path, monkeypatch) -> None:

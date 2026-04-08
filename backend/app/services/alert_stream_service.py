@@ -25,6 +25,8 @@ class AlertStreamService:
         summary: str,
         source: str | None,
         location: str | None,
+        latitude: float | None,
+        longitude: float | None,
     ) -> dict[str, Any]:
         return {
             "event_id": str(uuid4()),
@@ -34,6 +36,8 @@ class AlertStreamService:
             "summary": summary,
             "source": source,
             "location": location,
+            "latitude": latitude,
+            "longitude": longitude,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
 

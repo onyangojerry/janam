@@ -32,14 +32,22 @@ class JanamAnalysisService:
         report_type: str,
         source: str | None,
         location: str | None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        extraction_metadata: dict[str, Any] | None = None,
     ) -> StoredReport:
         result = self.analyze(report, report_type)
+        extraction_payload = dict(result["extraction"])
+        if extraction_metadata:
+            extraction_payload.update(extraction_metadata)
         stored = self._repository.create_report(
             report=report,
             report_type=report_type,
             source=source,
             location=location,
-            extraction=result["extraction"],
+            latitude=latitude,
+            longitude=longitude,
+            extraction=extraction_payload,
             analysis=result["analysis"],
         )
         logger.info("Report persisted id=%s type=%s severity=%s", stored.id, stored.report_type, stored.analysis.get("severity"))

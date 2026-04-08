@@ -17,6 +17,8 @@ class StoredReport:
     report_type: str
     source: str | None
     location: str | None
+    latitude: float | None
+    longitude: float | None
     extraction: dict[str, Any]
     analysis: dict[str, Any]
     created_at: str
@@ -28,6 +30,8 @@ class StoredReport:
             "report_type": self.report_type,
             "source": self.source,
             "location": self.location,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
             "extraction": self.extraction,
             "analysis": self.analysis,
             "created_at": self.created_at,
@@ -42,6 +46,8 @@ class ReportRepository:
         report_type: str,
         source: str | None,
         location: str | None,
+        latitude: float | None,
+        longitude: float | None,
         extraction: dict[str, Any],
         analysis: dict[str, Any],
     ) -> StoredReport:
@@ -54,10 +60,12 @@ class ReportRepository:
                     report_type,
                     source,
                     location,
+                    latitude,
+                    longitude,
                     extraction_json,
                     analysis_json,
                     created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
             )
             values = (
@@ -65,6 +73,8 @@ class ReportRepository:
                 report_type,
                 source,
                 location,
+                latitude,
+                longitude,
                 json.dumps(extraction),
                 json.dumps(analysis),
                 created_at,
@@ -85,6 +95,8 @@ class ReportRepository:
             report_type=report_type,
             source=source,
             location=location,
+            latitude=latitude,
+            longitude=longitude,
             extraction=extraction,
             analysis=analysis,
             created_at=created_at,
@@ -103,6 +115,8 @@ class ReportRepository:
             report_type=row["report_type"],
             source=row["source"],
             location=row["location"],
+            latitude=row["latitude"],
+            longitude=row["longitude"],
             extraction=json.loads(row["extraction_json"]),
             analysis=json.loads(row["analysis_json"]),
             created_at=row["created_at"],
@@ -122,6 +136,8 @@ class ReportRepository:
                 report_type=row["report_type"],
                 source=row["source"],
                 location=row["location"],
+                latitude=row["latitude"],
+                longitude=row["longitude"],
                 extraction=json.loads(row["extraction_json"]),
                 analysis=json.loads(row["analysis_json"]),
                 created_at=row["created_at"],
@@ -175,6 +191,8 @@ class ReportRepository:
                 report_type=row["report_type"],
                 source=row["source"],
                 location=row["location"],
+                latitude=row["latitude"],
+                longitude=row["longitude"],
                 extraction=json.loads(row["extraction_json"]),
                 analysis=json.loads(row["analysis_json"]),
                 created_at=row["created_at"],
@@ -187,3 +205,78 @@ class ReportRepository:
             reports = [report for report in reports if str(report.analysis.get("severity", "")).lower() == severity_lower]
 
         return reports
+
+    def list_reports_since(self, report_id: int, limit: int = 100) -> list[StoredReport]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                to_driver_sql("SELECT * FROM reports WHERE id > ? ORDER BY id ASC LIMIT ?"),
+                (report_id, limit),
+            ).fetchall()
+
+        return [
+            StoredReport(
+                id=row["id"],
+                report=row["report"],
+                report_type=row["report_type"],
+                source=row["source"],
+                location=row["location"],
+                latitude=row["latitude"],
+                longitude=row["longitude"],
+                extraction=json.loads(row["extraction_json"]),
+                analysis=json.loads(row["analysis_json"]),
+                created_at=row["created_at"],
+            )
+            for row in rows
+        ]
+
+    def location_analytics(self, limit: int = 5000) -> list[dict[str, Any]]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                to_driver_sql(
+                    """
+                    SELECT location, latitude, longitude, analysis_json, created_at
+                    FROM reports
+                    WHERE TRIM(COALESCE(location, '')) != ''
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """
+                ),
+                (limit,),
+            ).fetchall()
+
+        grouped: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            location = str(row["location"]).strip()
+            if not location:
+                continue
+
+            severity = str(json.loads(row["analysis_json"]).get("severity", "low")).lower()
+            if location not in grouped:
+                grouped[location] = {
+                    "location": location,
+                    "latitude": row["latitude"],
+                    "longitude": row["longitude"],
+                    "total_reports": 0,
+                    "high_count": 0,
+                    "medium_count": 0,
+                    "low_count": 0,
+                    "last_report_at": row["created_at"],
+                }
+
+            bucket = grouped[location]
+            bucket["total_reports"] += 1
+            if severity == "high":
+                bucket["high_count"] += 1
+            elif severity == "medium":
+                bucket["medium_count"] += 1
+            else:
+                bucket["low_count"] += 1
+
+            if row["created_at"] > bucket["last_report_at"]:
+                bucket["last_report_at"] = row["created_at"]
+            if bucket["latitude"] is None and row["latitude"] is not None:
+                bucket["latitude"] = row["latitude"]
+            if bucket["longitude"] is None and row["longitude"] is not None:
+                bucket["longitude"] = row["longitude"]
+
+        return sorted(grouped.values(), key=lambda item: (item["high_count"], item["total_reports"]), reverse=True)

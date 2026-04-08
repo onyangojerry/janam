@@ -11,7 +11,7 @@ from typing import Any
 class JanamBrain:
     def __init__(self, report_format: str = "text"):
         self.report_format = report_format
-        self.formats = {"text", "audio", "video"}
+        self.formats = {"text", "audio", "image", "video"}
 
     def _normalize_report(self, report: str) -> str:
         return re.sub(r"\s+", " ", report.strip()).lower()
@@ -39,6 +39,8 @@ class JanamBrain:
 
         if report_type == "audio":
             payload["source_hint"] = "audio-transcript-prototype"
+        elif report_type == "image":
+            payload["source_hint"] = "image-caption-prototype"
         elif report_type == "video":
             payload["source_hint"] = "video-description-prototype"
         else:

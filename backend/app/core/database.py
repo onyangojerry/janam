@@ -69,6 +69,8 @@ def init_database() -> None:
                     report_type TEXT NOT NULL,
                     source TEXT,
                     location TEXT,
+                    latitude DOUBLE PRECISION,
+                    longitude DOUBLE PRECISION,
                     extraction_json TEXT NOT NULL,
                     analysis_json TEXT NOT NULL,
                     created_at TEXT NOT NULL
@@ -84,6 +86,8 @@ def init_database() -> None:
                     report_type TEXT NOT NULL,
                     source TEXT,
                     location TEXT,
+                    latitude REAL,
+                    longitude REAL,
                     extraction_json TEXT NOT NULL,
                     analysis_json TEXT NOT NULL,
                     created_at TEXT NOT NULL
@@ -91,11 +95,27 @@ def init_database() -> None:
                 """
             )
 
+        # Backward-compatible migration for existing databases created before GPS support.
+        if is_postgres_backend():
+            connection.execute("ALTER TABLE reports ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION")
+            connection.execute("ALTER TABLE reports ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION")
+        else:
+            columns = {
+                row["name"] for row in connection.execute("PRAGMA table_info(reports)").fetchall()
+            }
+            if "latitude" not in columns:
+                connection.execute("ALTER TABLE reports ADD COLUMN latitude REAL")
+            if "longitude" not in columns:
+                connection.execute("ALTER TABLE reports ADD COLUMN longitude REAL")
+
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_reports_report_type ON reports(report_type)"
         )
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_reports_location ON reports(location)"
+        )
+        connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_reports_lat_lon ON reports(latitude, longitude)"
         )
         connection.execute(
             "CREATE INDEX IF NOT EXISTS idx_reports_source ON reports(source)"

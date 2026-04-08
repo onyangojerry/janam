@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Janam Operations Console</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Inter, system-ui, -apple-system, sans-serif; background: #0f1115; color: #e8eef7; }
@@ -27,6 +33,19 @@
     .metric .v { font-size: 20px; font-weight: 700; margin-top: 4px; }
     .danger-banner { border-radius: 8px; padding: 10px; border: 1px solid #2f3b4f; background: #161f2e; font-weight: 600; margin-top: 10px; }
     .pill { display: inline-block; font-size: 12px; color: #a9b8cc; margin-left: 8px; }
+    .map { height: 340px; border-radius: 10px; border: 1px solid #2f3b4f; overflow: hidden; }
+    .map-controls { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .map-controls-2 { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .map-controls-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; align-items: center; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #c7d5e8; }
+    .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+    .dot-high { background: #d62d20; }
+    .dot-medium { background: #f4b400; }
+    .dot-low { background: #2ea043; }
+    .map-actions { display: inline-flex; gap: 8px; }
+    .map-actions button { width: auto; min-width: 120px; }
+    .status-line { font-size: 13px; color: #c7d5e8; }
     @media (max-width: 1100px) { .grid, .row, .row-4, .btn-row, .grid-3 { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -60,6 +79,9 @@
         <button id="btnListReports">List Reports</button>
         <button id="btnGetAlerts">Get Alerts</button>
       </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button id="btnLocationAnalytics">Location Analytics</button>
+      </div>
     </section>
 
     <section class="grid" style="margin-top:16px;">
@@ -72,6 +94,7 @@
             <select id="reportType">
               <option value="text">text</option>
               <option value="audio">audio</option>
+              <option value="image">image</option>
               <option value="video">video</option>
             </select>
           </div>
@@ -80,14 +103,28 @@
             <input id="location" value="zone-a">
           </div>
         </div>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label for="latitude">Latitude</label>
+            <input id="latitude" type="number" step="any" placeholder="e.g. 6.5244">
+          </div>
+          <div>
+            <label for="longitude">Longitude</label>
+            <input id="longitude" type="number" step="any" placeholder="e.g. 3.3792">
+          </div>
+        </div>
         <div style="margin-top:10px;">
           <label for="source">Source</label>
           <input id="source" value="citizen-hotline">
+        </div>
+        <div class="btn-row" style="margin-top:10px;">
+          <button id="btnUseGps">Use Device GPS (OpenStreetMap)</button>
         </div>
         <div class="btn-row">
           <button id="btnAnalyze">Analyze (typed)</button>
           <button id="btnAnalyzeText">Analyze Text</button>
           <button id="btnAnalyzeAudio">Analyze Audio</button>
+          <button id="btnAnalyzeImage">Analyze Image</button>
           <button id="btnAnalyzeVideo">Analyze Video</button>
         </div>
       </div>
@@ -116,6 +153,7 @@
               <option value="">any</option>
               <option value="text">text</option>
               <option value="audio">audio</option>
+              <option value="image">image</option>
               <option value="video">video</option>
             </select>
           </div>
@@ -139,6 +177,7 @@
         <div class="btn-row">
           <button id="btnWsUpdates">Connect /ws/updates</button>
           <button id="btnWsAlerts">Connect /ws/alerts</button>
+          <button id="btnWsCases">Connect /ws/cases</button>
           <button id="btnWsInit">Send WS init</button>
           <button id="btnWsClose">Close WS</button>
         </div>
@@ -176,8 +215,53 @@
       <label>Operations Output</label>
       <pre id="output"></pre>
     </section>
+
+    <section class="card" style="margin-top:16px;">
+      <label>Live Case Map (OpenStreetMap)</label>
+      <div class="map-controls">
+        <div class="legend">
+          <label class="legend-item" for="filterHigh"><input id="filterHigh" type="checkbox" checked> <span class="dot dot-high"></span> High</label>
+          <label class="legend-item" for="filterMedium"><input id="filterMedium" type="checkbox" checked> <span class="dot dot-medium"></span> Medium</label>
+          <label class="legend-item" for="filterLow"><input id="filterLow" type="checkbox" checked> <span class="dot dot-low"></span> Low</label>
+        </div>
+        <div class="map-actions">
+          <button id="btnMapFit">Fit Visible Cases</button>
+          <button id="btnMapCenterHigh">Center High Risk</button>
+        </div>
+      </div>
+      <div class="map-controls-2">
+        <label class="legend-item" for="enableGeofence"><input id="enableGeofence" type="checkbox"> Enable Geofence Alerts</label>
+        <label class="legend-item" for="enableAudibleAlarm"><input id="enableAudibleAlarm" type="checkbox"> Audible Alarm</label>
+        <div>
+          <label for="geofenceRadiusMeters">Alert Radius (meters)</label>
+          <input id="geofenceRadiusMeters" type="number" min="50" step="50" value="1000">
+        </div>
+        <button id="btnGeofenceCheck">Check Geofence Now</button>
+      </div>
+      <div class="map-controls-3">
+        <div>
+          <label for="geofenceCooldownHighSeconds">High Cooldown (seconds)</label>
+          <input id="geofenceCooldownHighSeconds" type="number" min="5" step="5" value="30">
+        </div>
+        <div>
+          <label for="geofenceCooldownMediumSeconds">Medium Cooldown (seconds)</label>
+          <input id="geofenceCooldownMediumSeconds" type="number" min="5" step="5" value="90">
+        </div>
+        <div>
+          <label for="geofenceCooldownLowSeconds">Low Cooldown (seconds)</label>
+          <input id="geofenceCooldownLowSeconds" type="number" min="5" step="5" value="180">
+        </div>
+      </div>
+      <div class="status-line" id="geofenceStatus">Geofence: disabled</div>
+      <div id="caseMap" class="map"></div>
+    </section>
   </main>
 
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script type="module" src="/demos/janam.js"></script>
 </body>
 </html>

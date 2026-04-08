@@ -1,0 +1,159 @@
+{
+  "name": "Janam WhatsApp Incident Reporter",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "whatsapp",
+        "options": {}
+      },
+      "id": "webhook-meta-cloud-api",
+      "name": "Webhook: Meta Cloud API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "whatsapp-webhook-id",
+      "disabled": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract WhatsApp message data from Meta Cloud API payload\nconst input = $input.first().json;\n\n// Parse Meta webhook structure\nconst message = input.entry?.[0]?.changes?.[0]?.value?.messages?.[0];\nconst metadata = input.entry?.[0]?.changes?.[0]?.value?.metadata;\n\nif (!message) {\n  throw new Error('Invalid WhatsApp message structure');\n}\n\n// Normalize to Janam IngestEventRequest\nconst janamPayload = {\n  channel: 'whatsapp',\n  platform: 'meta-cloud-api',\n  sender_id: message.from,\n  message_text: message.text?.body || '',\n  external_event_id: message.id,\n  timestamp_iso: new Date(parseInt(message.timestamp) * 1000).toISOString(),\n  media_type: 'text',\n  anonymous_mode: true,  // WhatsApp reporters stay anonymous\n  raw_payload: null      // Don't store raw Meta payload for privacy\n};\n\nreturn { janamPayload };"
+      },
+      "id": "normalize-whatsapp",
+      "name": "Normalize WhatsApp Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        450,
+        300
+      ],
+      "disabled": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate HMAC-SHA256 signature for Janam /ingest/n8n\nconst crypto = require('crypto');\nconst input = $input.first().json;\nconst janamPayload = input.janamPayload;\n\n// Get webhook secret from n8n environment\nconst secret = $env.JANAM_N8N_WEBHOOK_SECRET;\nif (!secret) {\n  throw new Error('Missing JANAM_N8N_WEBHOOK_SECRET in n8n environment variables');\n}\n\n// Generate timestamp and signature\nconst timestamp = Math.floor(Date.now() / 1000).toString();\nconst payloadString = JSON.stringify(janamPayload);\nconst messageToSign = `${timestamp}.${payloadString}`;\nconst signature = crypto\n  .createHmac('sha256', secret)\n  .update(messageToSign)\n  .digest('hex');\n\nreturn {\n  payload: janamPayload,\n  headers: {\n    'X-Janam-Webhook-Timestamp': timestamp,\n    'X-Janam-Webhook-Signature': `sha256=${signature}`,\n    'Content-Type': 'application/json',\n    'X-API-Key': $env.JANAM_WRITE_API_KEY\n  },\n  url: $env.JANAM_INGEST_URL || 'http://localhost:8000/ingest/n8n'\n};"
+      },
+      "id": "sign-webhook",
+      "name": "Generate HMAC Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        650,
+        300
+      ],
+      "disabled": false
+    },
+    {
+      "parameters": {
+        "url": "{{ $json.url }}",
+        "method": "POST",
+        "headers": {
+          "X-Janam-Webhook-Timestamp": "{{ $json.headers['X-Janam-Webhook-Timestamp'] }}",
+          "X-Janam-Webhook-Signature": "{{ $json.headers['X-Janam-Webhook-Signature'] }}",
+          "X-API-Key": "{{ $json.headers['X-API-Key'] }}",
+          "Content-Type": "application/json"
+        },
+        "body": "{{ JSON.stringify($json.payload) }}"
+      },
+      "id": "post-to-janam",
+      "name": "POST to Janam /ingest/n8n",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        850,
+        300
+      ],
+      "disabled": false
+    },
+    {
+      "parameters": {
+        "message": "WhatsApp message successfully ingested into Janam",
+        "options": {}
+      },
+      "id": "success-log",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        200
+      ],
+      "disabled": false
+    },
+    {
+      "parameters": {
+        "message": "Error ingesting WhatsApp message: {{ $json.detail || $json.error || JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "error-log",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1050,
+        400
+      ],
+      "disabled": false
+    }
+  ],
+  "connections": {
+    "webhook-meta-cloud-api": {
+      "main": [
+        [
+          {
+            "node": "normalize-whatsapp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "normalize-whatsapp": {
+      "main": [
+        [
+          {
+            "node": "sign-webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sign-webhook": {
+      "main": [
+        [
+          {
+            "node": "post-to-janam",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "post-to-janam": {
+      "main": [
+        [
+          {
+            "node": "success-log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "errorHandler": {
+      "errorHandlingEnabled": true,
+      "errorNode": "error-log"
+    }
+  },
+  "versionId": "1",
+  "meta": {
+    "instanceId": "default"
+  },
+  "pinData": {}
+}

@@ -1,4 +1,16 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: janam
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   backend:
     build:
       context: .
@@ -6,12 +18,14 @@ services:
     env_file:
       - .env
     environment:
-      JANAM_DB_PATH: /var/lib/janam/janam.sqlite3
+      JANAM_DB_BACKEND: postgres
+      JANAM_DATABASE_URL: postgresql://postgres:postgres@db:5432/janam
       JANAM_LOG_PATH: /var/log/janam/janam.log
     ports:
       - "8000:8000"
+    depends_on:
+      - db
     volumes:
-      - janam_data:/var/lib/janam
       - janam_logs:/var/log/janam
     restart: unless-stopped
 
@@ -26,5 +40,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  janam_data:
+  postgres_data:
   janam_logs:
