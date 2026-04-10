@@ -77,6 +77,24 @@ docker compose down
 - Keep `JANAM_WRITE_API_KEY` and `JANAM_READ_API_KEY` secret.
 - Restrict `JANAM_CORS_ORIGINS` to trusted frontend origins.
 
+## Documentation and compliance
+
+Use the docs folder as the operational source of truth for deployment, API usage, and release controls.
+
+- [Documentation index](docs/README.md)
+- [Architecture](docs/architecture.md)
+- [API reference](docs/api-reference.md)
+- [Deployment guide](docs/deployment.md)
+- [Operations runbook](docs/operations-runbook.md)
+- [Code compliance standard](docs/code-compliance.md)
+
+Before merging or releasing changes, verify the compliance checklist in [docs/code-compliance.md](docs/code-compliance.md), especially:
+
+- Tests pass locally or in CI.
+- No placeholder secrets remain in production configuration.
+- Signed ingest still validates end-to-end.
+- Privacy defaults remain enabled for untrusted reporter channels.
+
 ## Key environment variables
 
 - `JANAM_WRITE_API_KEY`: write-role API key

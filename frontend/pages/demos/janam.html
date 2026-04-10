@@ -11,22 +11,203 @@
     crossorigin=""
   >
   <style>
+    :root {
+      --bg: #071019;
+      --bg-elevated: rgba(10, 18, 29, 0.88);
+      --card: rgba(14, 22, 35, 0.9);
+      --card-border: rgba(180, 207, 235, 0.14);
+      --text: #eef5ff;
+      --muted: #a9b8cc;
+      --accent: #59b6ff;
+      --accent-2: #8cf2c7;
+      --danger: #ff6b6b;
+      --focus: #8cf2c7;
+    }
+
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Inter, system-ui, -apple-system, sans-serif; background: #0f1115; color: #e8eef7; }
-    .app { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    html, body { margin: 0; min-height: 100%; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(89, 182, 255, 0.18), transparent 32%),
+        radial-gradient(circle at 80% 10%, rgba(140, 242, 199, 0.08), transparent 22%),
+        linear-gradient(180deg, #071019 0%, #08111a 100%);
+      color: var(--text);
+    }
+    .app { max-width: 1360px; margin: 0 auto; padding: 24px; }
     h1 { margin: 0 0 8px; }
-    .muted { color: #a9b8cc; margin-bottom: 16px; }
+    .muted { color: var(--muted); margin-bottom: 16px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .card { background: #171b23; border: 1px solid #2a3444; border-radius: 12px; padding: 14px; }
-    label { display: block; font-size: 12px; color: #a9b8cc; margin-bottom: 6px; }
-    input, textarea, select, button { width: 100%; border-radius: 8px; border: 1px solid #2f3b4f; background: #0f141d; color: #e8eef7; padding: 9px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+    }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      min-height: 340px;
+      margin-bottom: 16px;
+      border: 1px solid var(--card-border);
+      background:
+        linear-gradient(180deg, rgba(7, 16, 25, 0.18), rgba(7, 16, 25, 0.9)),
+        url('/site_image_data/SAR.webp') center center / cover no-repeat;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 72% 20%, rgba(140, 242, 199, 0.22), transparent 18%),
+        radial-gradient(circle at 18% 78%, rgba(89, 182, 255, 0.24), transparent 18%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 18px;
+      align-items: end;
+      height: 100%;
+      min-height: 340px;
+      padding: 28px;
+    }
+    .hero-copy {
+      max-width: 56rem;
+      padding: 22px;
+      border-radius: 18px;
+      background: rgba(7, 16, 25, 0.8);
+      border: 1px solid rgba(180, 207, 235, 0.16);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(89, 182, 255, 0.14);
+      border: 1px solid rgba(89, 182, 255, 0.18);
+      color: #d8eeff;
+    }
+    .hero-kicker {
+      margin-top: 12px;
+      color: #9fb6ca;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .hero-copy h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(2.2rem, 5vw, 4.5rem);
+      line-height: 0.96;
+      letter-spacing: -0.05em;
+    }
+    .hero-copy p {
+      margin: 0;
+      max-width: 54ch;
+      color: #e2eefb;
+      line-height: 1.7;
+    }
+    .hero-quote {
+      margin-top: 16px;
+      padding-left: 14px;
+      border-left: 2px solid rgba(89, 182, 255, 0.5);
+      color: #eef5ff;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .hero-stats {
+      display: grid;
+      gap: 12px;
+      align-self: stretch;
+    }
+    .hero-stat {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(10, 18, 29, 0.76);
+      border: 1px solid rgba(180, 207, 235, 0.14);
+    }
+    .hero-stat .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .hero-stat .v { margin-top: 6px; font-size: 16px; font-weight: 700; line-height: 1.4; }
+    .hero-stat .s { margin-top: 6px; font-size: 13px; color: #d1deea; line-height: 1.5; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .hero-actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(180, 207, 235, 0.14);
+      color: var(--text);
+      background: rgba(255,255,255,0.03);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .hero-actions a.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #04111b;
+      border-color: transparent;
+    }
+    .hero-actions a:hover { transform: translateY(-1px); }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .topbar-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .topbar-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(89, 182, 255, 0.95), rgba(140, 242, 199, 0.82));
+      color: #04111b;
+      font-weight: 800;
+    }
+    .jump-select {
+      min-width: 260px;
+      padding: 11px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(180, 207, 235, 0.16);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      font: inherit;
+    }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    input, textarea, select, button { width: 100%; border-radius: 8px; border: 1px solid #2f3b4f; background: #0f141d; color: var(--text); padding: 9px; }
+    input, textarea, select, button { border: 1px solid #38516f; background: rgba(12, 20, 31, 0.94); }
     textarea { min-height: 100px; resize: vertical; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .btn-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
     button { cursor: pointer; background: #1d365a; }
-    button:hover { background: #244777; }
+    button:hover { background: #28538b; }
     pre { margin: 0; white-space: pre-wrap; word-break: break-word; background: #0f141d; border: 1px solid #2f3b4f; border-radius: 8px; padding: 10px; min-height: 180px; }
     .metric { border: 1px solid #2f3b4f; border-radius: 8px; padding: 10px; background: #0f141d; }
     .metric .k { color: #a9b8cc; font-size: 12px; }
@@ -46,214 +227,538 @@
     .map-actions { display: inline-flex; gap: 8px; }
     .map-actions button { width: auto; min-width: 120px; }
     .status-line { font-size: 13px; color: #c7d5e8; }
-    @media (max-width: 1100px) { .grid, .row, .row-4, .btn-row, .grid-3 { grid-template-columns: 1fr; } }
+    .scroll-story {
+      display: grid;
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .scene {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      border: 1px solid rgba(180, 207, 235, 0.14);
+      background: rgba(12, 22, 35, 0.82);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+      min-height: 72vh;
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 18px;
+      padding: 18px;
+      transform-style: preserve-3d;
+      perspective: 1400px;
+      transform: translateY(20px) rotateX(9deg) scale(0.97);
+      opacity: 0.66;
+      transition: transform 700ms cubic-bezier(.2,.8,.2,1), opacity 700ms cubic-bezier(.2,.8,.2,1), border-color 700ms ease;
+    }
+    .scene.is-active {
+      transform: translateY(0) rotateX(0deg) scale(1);
+      opacity: 1;
+      border-color: rgba(89, 182, 255, 0.24);
+      box-shadow: 0 28px 90px rgba(0,0,0,0.44), 0 0 0 1px rgba(140,242,199,0.22) inset;
+    }
+    .scene::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(7,16,25,0.3), rgba(7,16,25,0.82));
+      pointer-events: none;
+      z-index: 0;
+    }
+    .scene[data-bg="nairobi"]::after,
+    .scene[data-bg="lights"]::after,
+    .scene[data-bg="sar"]::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-position: center center;
+      background-size: cover;
+      background-repeat: no-repeat;
+      transform: scale(1.05);
+      filter: saturate(1.02) contrast(1.04);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .scene[data-bg="nairobi"]::after { background-image: url('/site_image_data/nairobi_cbd.webp'); }
+    .scene[data-bg="lights"]::after { background-image: url('/site_image_data/africa_lights.avif'); }
+    .scene[data-bg="sar"]::after { background-image: url('/site_image_data/SAR.webp'); }
+    .scene-copy,
+    .scene-visual {
+      position: relative;
+      z-index: 1;
+      border-radius: 22px;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.28);
+    }
+    .scene-copy {
+      padding: 18px 10px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+    }
+    .scene-copy h2 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: 0.98;
+      letter-spacing: -0.06em;
+      max-width: 12ch;
+    }
+    .scene-copy p {
+      margin: 0;
+      max-width: 58ch;
+      color: #e2eefb;
+      line-height: 1.8;
+      font-size: 16px;
+    }
+    .scene-meta {
+      display: inline-flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .scene-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(180, 207, 235, 0.16);
+      background: rgba(255,255,255,0.03);
+      color: #dbe8f5;
+      font-size: 13px;
+    }
+    .scene-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .scene-links a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(180, 207, 235, 0.16);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      font-weight: 600;
+    }
+    .scene-links a.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #04111b;
+      border-color: transparent;
+    }
+    .scene-visual {
+      overflow: hidden;
+      padding: 18px;
+    }
+    .scene-visual-inner {
+      height: 100%;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transform: translateZ(24px) rotateY(-8deg) scale(0.96);
+      transition: transform 700ms cubic-bezier(.2,.8,.2,1);
+    }
+    .scene.is-active .scene-visual-inner {
+      transform: translateZ(0) rotateY(0deg) scale(1);
+    }
+    .scene-panel {
+      border-radius: 20px;
+      border: 1px solid rgba(180, 207, 235, 0.10);
+      background: rgba(10, 18, 29, 0.68);
+      padding: 14px;
+    }
+    .scene-panel + .scene-panel {
+      margin-top: 14px;
+    }
+    .panel-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9fb6ca;
+    }
+    .scene-divider {
+      height: 1px;
+      background: rgba(180, 207, 235, 0.12);
+      margin: 12px 0;
+    }
+    .scene-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 14px 6px 0;
+    }
+    .scene-footer nav { display: inline-flex; gap: 14px; flex-wrap: wrap; }
+    .scene-footer a { color: #dbe8f5; }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible,
+    select:focus-visible,
+    .scene-links a:focus-visible,
+    .hero-actions a:focus-visible,
+    .jump-select:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+      border-color: rgba(140, 242, 199, 0.48);
+    }
+    @media (max-width: 1100px) { .grid, .row, .row-4, .btn-row, .grid-3, .hero-inner, .scene { grid-template-columns: 1fr; } }
+    @media (max-width: 720px) {
+      .hero { min-height: 520px; }
+      .hero-inner { min-height: 520px; padding: 16px; }
+      .hero-copy { padding: 16px; }
+      .scene { grid-template-columns: 1fr; min-height: auto; }
+      .scene-visual { padding: 14px; }
+      .topbar { align-items: flex-start; }
+      .jump-select { width: 100%; }
+    }
   </style>
 </head>
 <body>
   <main class="app">
-    <h1>Janam Operations Console</h1>
-    <p class="muted">Janam turns incident reports into real-time danger-zone intelligence so responders can act faster and communities stay safer.</p>
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="topbar-mark">J</div>
+        <div>
+          <div>Janam</div>
+          <div style="color: var(--muted); font-size: 13px; font-weight: 500;">Incident intelligence console</div>
+        </div>
+      </div>
+      <select class="jump-select" id="consoleJump" aria-label="Jump to section or page">
+        <option value="">Jump to...</option>
+        <option value="#hero">Hero</option>
+        <option value="#scene-intake">Intake</option>
+        <option value="#scene-live">Realtime</option>
+        <option value="#scene-map">Map</option>
+        <option value="/">Landing page</option>
+        <option value="/docs/deployment.md">Deployment docs</option>
+        <option value="/docs/code-compliance.md">Code compliance</option>
+      </select>
+    </header>
 
-    <section class="card">
-      <div class="row-4">
-        <div>
-          <label for="apiBase">API Base URL</label>
-          <input id="apiBase" value="http://localhost:8000">
-        </div>
-        <div>
-          <label for="apiKey">X-API-Key</label>
-          <input id="apiKey" value="janam-dev-key">
-        </div>
-        <div>
-          <label for="requestId">Request ID (optional)</label>
-          <input id="requestId" placeholder="auto-generated when empty">
-        </div>
-        <div>
-          <label for="defaultLimit">Default Limit</label>
-          <input id="defaultLimit" type="number" min="1" max="200" value="25">
-        </div>
-      </div>
-      <div class="btn-row">
-        <button id="btnHealth">Health</button>
-        <button id="btnFormats">Formats</button>
-        <button id="btnListReports">List Reports</button>
-        <button id="btnGetAlerts">Get Alerts</button>
-      </div>
-      <div class="btn-row" style="margin-top:10px;">
-        <button id="btnLocationAnalytics">Location Analytics</button>
-      </div>
-    </section>
-
-    <section class="grid" style="margin-top:16px;">
-      <div class="card">
-        <label for="reportText">Incident Report</label>
-        <textarea id="reportText">Gun attack reported near downtown.</textarea>
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label for="reportType">Report type</label>
-            <select id="reportType">
-              <option value="text">text</option>
-              <option value="audio">audio</option>
-              <option value="image">image</option>
-              <option value="video">video</option>
-            </select>
-          </div>
-          <div>
-            <label for="location">Location</label>
-            <input id="location" value="zone-a">
+    <section class="hero" id="hero">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="hero-eyebrow">SAR intelligence console</div>
+          <div class="hero-kicker">Situation room / responder view</div>
+          <h1>Janam Operations Console</h1>
+          <p>Janam turns incident reports into real-time danger-zone intelligence so responders can act faster, coordinate safely, and keep citizen reporters protected by default.</p>
+          <p class="hero-quote">Live ingest, live map, live alerting. The console keeps the operational picture current without exposing the people who sent the first report.</p>
+          <div class="hero-actions">
+            <a class="primary" href="/">Landing page</a>
+            <a href="#caseMap">Live map</a>
+            <a href="#dangerBanner">Danger board</a>
           </div>
         </div>
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label for="latitude">Latitude</label>
-            <input id="latitude" type="number" step="any" placeholder="e.g. 6.5244">
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="k">Image theme</div>
+            <div class="v">SAR.webp</div>
+            <div class="s">The page now uses the SAR asset to establish the incident-response mood and visual identity.</div>
           </div>
-          <div>
-            <label for="longitude">Longitude</label>
-            <input id="longitude" type="number" step="any" placeholder="e.g. 3.3792">
+          <div class="hero-stat">
+            <div class="k">Realtime ingest</div>
+            <div class="v">Reports, alerts, cases</div>
+            <div class="s">The existing console still drives API checks, websocket streams, and geofence response.</div>
           </div>
-        </div>
-        <div style="margin-top:10px;">
-          <label for="source">Source</label>
-          <input id="source" value="citizen-hotline">
-        </div>
-        <div class="btn-row" style="margin-top:10px;">
-          <button id="btnUseGps">Use Device GPS (OpenStreetMap)</button>
-        </div>
-        <div class="btn-row">
-          <button id="btnAnalyze">Analyze (typed)</button>
-          <button id="btnAnalyzeText">Analyze Text</button>
-          <button id="btnAnalyzeAudio">Analyze Audio</button>
-          <button id="btnAnalyzeImage">Analyze Image</button>
-          <button id="btnAnalyzeVideo">Analyze Video</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <label>Investigation Query</label>
-        <div class="row">
-          <div>
-            <label for="searchQ">Search term</label>
-            <input id="searchQ" placeholder="e.g. attack, theft, zone-a">
+          <div class="hero-stat">
+            <div class="k">Privacy posture</div>
+            <div class="v">Anonymous by default</div>
+            <div class="s">Fingerprinting, payload scrubbing, and GPS coarsening remain the default operational stance.</div>
           </div>
-          <div>
-            <label for="searchSeverity">Severity</label>
-            <select id="searchSeverity">
-              <option value="">any</option>
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-            </select>
-          </div>
-        </div>
-        <div class="row" style="margin-top:10px;">
-          <div>
-            <label for="searchType">Type</label>
-            <select id="searchType">
-              <option value="">any</option>
-              <option value="text">text</option>
-              <option value="audio">audio</option>
-              <option value="image">image</option>
-              <option value="video">video</option>
-            </select>
-          </div>
-          <div>
-            <label for="reportId">Get report by ID</label>
-            <input id="reportId" type="number" min="1" placeholder="e.g. 12">
-          </div>
-        </div>
-        <div class="btn-row">
-          <button id="btnSearch">Search Reports</button>
-          <button id="btnGetReport">Get Report</button>
-          <button id="btnClearOutput">Clear Output</button>
-          <button id="btnRefreshIntel">Refresh Intel</button>
         </div>
       </div>
     </section>
 
-    <section class="grid" style="margin-top:16px;">
-      <div class="card">
-        <label>Real-time Streams</label>
-        <div class="btn-row">
-          <button id="btnWsUpdates">Connect /ws/updates</button>
-          <button id="btnWsAlerts">Connect /ws/alerts</button>
-          <button id="btnWsCases">Connect /ws/cases</button>
-          <button id="btnWsInit">Send WS init</button>
-          <button id="btnWsClose">Close WS</button>
-        </div>
-        <div style="margin-top:10px;">
-          <label for="wsPayload">/ws/updates payload</label>
-          <textarea id="wsPayload">Armed robbery escalation near bus station.</textarea>
-        </div>
-        <div class="btn-row">
-          <button id="btnWsSendPayload">Send payload</button>
-        </div>
-        <p class="muted" style="margin:8px 0 0;">Use read key for /ws/alerts and write key for /ws/updates.</p>
-      </div>
-
-      <div class="card">
-        <label>Danger Zone Board <span class="pill" id="liveStatus">live: idle</span></label>
-        <div class="grid-3">
-          <div class="metric">
-            <div class="k">High</div>
-            <div class="v" id="countHigh">0</div>
+    <section class="scroll-story">
+      <article class="scene scene-intake is-active" data-scene data-bg="nairobi" id="scene-intake">
+        <div class="scene-copy">
+          <div class="hero-eyebrow">Intake / controls / analysis</div>
+          <h2>Keep reports flowing into one operational lane.</h2>
+          <p>
+            The console should read like a briefing room, not a dashboard wall. Enter the backend,
+            submit reports, and move through the workflow in a continuous scroll rather than jumping
+            between stacks of cards.
+          </p>
+          <div class="scene-meta">
+            <span class="scene-tag">API auth</span>
+            <span class="scene-tag">Incident intake</span>
+            <span class="scene-tag">Search and triage</span>
           </div>
-          <div class="metric">
-            <div class="k">Medium</div>
-            <div class="v" id="countMedium">0</div>
-          </div>
-          <div class="metric">
-            <div class="k">Low</div>
-            <div class="v" id="countLow">0</div>
+          <div class="scene-links">
+            <a class="primary" href="#caseMap">Jump to map</a>
+            <a href="#dangerBanner">Jump to live status</a>
           </div>
         </div>
-        <div class="danger-banner" id="dangerBanner">No active danger trend yet.</div>
-      </div>
-    </section>
+        <div class="scene-visual">
+          <div class="scene-visual-inner">
+            <div class="scene-panel">
+              <div class="panel-title">API and write controls</div>
+              <div class="row-4">
+                <div>
+                  <label for="apiBase">API Base URL</label>
+                  <input id="apiBase" value="http://localhost:8000">
+                </div>
+                <div>
+                  <label for="apiKey">X-API-Key</label>
+                  <input id="apiKey" value="janam-dev-key">
+                </div>
+                <div>
+                  <label for="requestId">Request ID (optional)</label>
+                  <input id="requestId" placeholder="auto-generated when empty">
+                </div>
+                <div>
+                  <label for="defaultLimit">Default Limit</label>
+                  <input id="defaultLimit" type="number" min="1" max="200" value="25">
+                </div>
+              </div>
+              <div class="btn-row">
+                <button id="btnHealth">Health</button>
+                <button id="btnFormats">Formats</button>
+                <button id="btnListReports">List Reports</button>
+                <button id="btnGetAlerts">Get Alerts</button>
+              </div>
+              <div class="btn-row" style="margin-top:10px;">
+                <button id="btnLocationAnalytics">Location Analytics</button>
+              </div>
+            </div>
 
-    <section class="card" style="margin-top:16px;">
-      <label>Operations Output</label>
-      <pre id="output"></pre>
-    </section>
+            <div class="scene-panel">
+              <div class="panel-title">Report intake and search</div>
+              <div class="row">
+                <div>
+                  <label for="reportText">Incident Report</label>
+                  <textarea id="reportText">Gun attack reported near downtown.</textarea>
+                </div>
+                <div>
+                  <label>Investigation Query</label>
+                  <div class="row">
+                    <div>
+                      <label for="searchQ">Search term</label>
+                      <input id="searchQ" placeholder="e.g. attack, theft, zone-a">
+                    </div>
+                    <div>
+                      <label for="searchSeverity">Severity</label>
+                      <select id="searchSeverity">
+                        <option value="">any</option>
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-top:10px;">
+                    <div>
+                      <label for="searchType">Type</label>
+                      <select id="searchType">
+                        <option value="">any</option>
+                        <option value="text">text</option>
+                        <option value="audio">audio</option>
+                        <option value="image">image</option>
+                        <option value="video">video</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="reportId">Get report by ID</label>
+                      <input id="reportId" type="number" min="1" placeholder="e.g. 12">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px;">
+                <div>
+                  <label for="reportType">Report type</label>
+                  <select id="reportType">
+                    <option value="text">text</option>
+                    <option value="audio">audio</option>
+                    <option value="image">image</option>
+                    <option value="video">video</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="location">Location</label>
+                  <input id="location" value="zone-a">
+                </div>
+              </div>
+              <div class="row" style="margin-top:10px;">
+                <div>
+                  <label for="latitude">Latitude</label>
+                  <input id="latitude" type="number" step="any" placeholder="e.g. 6.5244">
+                </div>
+                <div>
+                  <label for="longitude">Longitude</label>
+                  <input id="longitude" type="number" step="any" placeholder="e.g. 3.3792">
+                </div>
+              </div>
+              <div style="margin-top:10px;">
+                <label for="source">Source</label>
+                <input id="source" value="citizen-hotline">
+              </div>
+              <div class="btn-row" style="margin-top:10px;">
+                <button id="btnUseGps">Use Device GPS (OpenStreetMap)</button>
+              </div>
+              <div class="btn-row">
+                <button id="btnAnalyze">Analyze (typed)</button>
+                <button id="btnAnalyzeText">Analyze Text</button>
+                <button id="btnAnalyzeAudio">Analyze Audio</button>
+                <button id="btnAnalyzeImage">Analyze Image</button>
+                <button id="btnAnalyzeVideo">Analyze Video</button>
+              </div>
+              <div class="btn-row" style="margin-top:10px;">
+                <button id="btnSearch">Search Reports</button>
+                <button id="btnGetReport">Get Report</button>
+                <button id="btnClearOutput">Clear Output</button>
+                <button id="btnRefreshIntel">Refresh Intel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
 
-    <section class="card" style="margin-top:16px;">
-      <label>Live Case Map (OpenStreetMap)</label>
-      <div class="map-controls">
-        <div class="legend">
-          <label class="legend-item" for="filterHigh"><input id="filterHigh" type="checkbox" checked> <span class="dot dot-high"></span> High</label>
-          <label class="legend-item" for="filterMedium"><input id="filterMedium" type="checkbox" checked> <span class="dot dot-medium"></span> Medium</label>
-          <label class="legend-item" for="filterLow"><input id="filterLow" type="checkbox" checked> <span class="dot dot-low"></span> Low</label>
+      <article class="scene scene-live" data-scene data-bg="lights" id="scene-live">
+        <div class="scene-copy">
+          <div class="hero-eyebrow">Realtime streams / danger board</div>
+          <h2>Let the live signal arrive as one continuous briefing.</h2>
+          <p>
+            This section keeps the streaming channels and severity board in a single view so the page feels
+            like a response workflow unfolding in time instead of a pile of unrelated panels.
+          </p>
+          <div class="scene-meta">
+            <span class="scene-tag">WebSockets</span>
+            <span class="scene-tag">Danger board</span>
+            <span class="scene-tag">Operations output</span>
+          </div>
+          <div class="scene-links">
+            <a class="primary" href="#output">Jump to output</a>
+            <a href="#caseMap">Jump to map</a>
+          </div>
         </div>
-        <div class="map-actions">
-          <button id="btnMapFit">Fit Visible Cases</button>
-          <button id="btnMapCenterHigh">Center High Risk</button>
+        <div class="scene-visual">
+          <div class="scene-visual-inner">
+            <div class="scene-panel">
+              <div class="panel-title">Real-time streams</div>
+              <div class="btn-row">
+                <button id="btnWsUpdates">Connect /ws/updates</button>
+                <button id="btnWsAlerts">Connect /ws/alerts</button>
+                <button id="btnWsCases">Connect /ws/cases</button>
+                <button id="btnWsInit">Send WS init</button>
+                <button id="btnWsClose">Close WS</button>
+              </div>
+              <div style="margin-top:10px;">
+                <label for="wsPayload">/ws/updates payload</label>
+                <textarea id="wsPayload">Armed robbery escalation near bus station.</textarea>
+              </div>
+              <div class="btn-row">
+                <button id="btnWsSendPayload">Send payload</button>
+              </div>
+              <p class="muted" style="margin:8px 0 0;">Use read key for /ws/alerts and write key for /ws/updates.</p>
+            </div>
+
+            <div class="scene-panel">
+              <div class="panel-title">Severity and output</div>
+              <label>Danger Zone Board <span class="pill" id="liveStatus">live: idle</span></label>
+              <div class="grid-3">
+                <div class="metric">
+                  <div class="k">High</div>
+                  <div class="v" id="countHigh">0</div>
+                </div>
+                <div class="metric">
+                  <div class="k">Medium</div>
+                  <div class="v" id="countMedium">0</div>
+                </div>
+                <div class="metric">
+                  <div class="k">Low</div>
+                  <div class="v" id="countLow">0</div>
+                </div>
+              </div>
+              <div class="danger-banner" id="dangerBanner">No active danger trend yet.</div>
+              <div class="scene-divider"></div>
+              <label>Operations Output</label>
+              <pre id="output"></pre>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="map-controls-2">
-        <label class="legend-item" for="enableGeofence"><input id="enableGeofence" type="checkbox"> Enable Geofence Alerts</label>
-        <label class="legend-item" for="enableAudibleAlarm"><input id="enableAudibleAlarm" type="checkbox"> Audible Alarm</label>
-        <div>
-          <label for="geofenceRadiusMeters">Alert Radius (meters)</label>
-          <input id="geofenceRadiusMeters" type="number" min="50" step="50" value="1000">
+      </article>
+
+      <article class="scene scene-map" data-scene data-bg="sar" id="scene-map">
+        <div class="scene-copy">
+          <div class="hero-eyebrow">Map / geofence / responder view</div>
+          <h2>Ground the briefing in place and proximity.</h2>
+          <p>
+            The SAR backdrop keeps the responder side focused on distance, radius, and route safety. This
+            section handles severity filtering, geofencing, audible alarms, and the live case map.
+          </p>
+          <div class="scene-meta">
+            <span class="scene-tag">OpenStreetMap</span>
+            <span class="scene-tag">Geofence alerts</span>
+            <span class="scene-tag">Responder radius</span>
+          </div>
+          <div class="scene-links">
+            <a class="primary" href="#caseMap">Open map</a>
+            <a href="/">Back to landing</a>
+          </div>
         </div>
-        <button id="btnGeofenceCheck">Check Geofence Now</button>
-      </div>
-      <div class="map-controls-3">
-        <div>
-          <label for="geofenceCooldownHighSeconds">High Cooldown (seconds)</label>
-          <input id="geofenceCooldownHighSeconds" type="number" min="5" step="5" value="30">
+        <div class="scene-visual">
+          <div class="scene-visual-inner">
+            <div class="scene-panel">
+              <div class="panel-title">Map filters and geofence controls</div>
+              <div class="map-controls">
+                <div class="legend">
+                  <label class="legend-item" for="filterHigh"><input id="filterHigh" type="checkbox" checked> <span class="dot dot-high"></span> High</label>
+                  <label class="legend-item" for="filterMedium"><input id="filterMedium" type="checkbox" checked> <span class="dot dot-medium"></span> Medium</label>
+                  <label class="legend-item" for="filterLow"><input id="filterLow" type="checkbox" checked> <span class="dot dot-low"></span> Low</label>
+                </div>
+                <div class="map-actions">
+                  <button id="btnMapFit">Fit Visible Cases</button>
+                  <button id="btnMapCenterHigh">Center High Risk</button>
+                </div>
+              </div>
+              <div class="map-controls-2">
+                <label class="legend-item" for="enableGeofence"><input id="enableGeofence" type="checkbox"> Enable Geofence Alerts</label>
+                <label class="legend-item" for="enableAudibleAlarm"><input id="enableAudibleAlarm" type="checkbox"> Audible Alarm</label>
+                <div>
+                  <label for="geofenceRadiusMeters">Alert Radius (meters)</label>
+                  <input id="geofenceRadiusMeters" type="number" min="50" step="50" value="1000">
+                </div>
+                <button id="btnGeofenceCheck">Check Geofence Now</button>
+              </div>
+              <div class="map-controls-3">
+                <div>
+                  <label for="geofenceCooldownHighSeconds">High Cooldown (seconds)</label>
+                  <input id="geofenceCooldownHighSeconds" type="number" min="5" step="5" value="30">
+                </div>
+                <div>
+                  <label for="geofenceCooldownMediumSeconds">Medium Cooldown (seconds)</label>
+                  <input id="geofenceCooldownMediumSeconds" type="number" min="5" step="5" value="90">
+                </div>
+                <div>
+                  <label for="geofenceCooldownLowSeconds">Low Cooldown (seconds)</label>
+                  <input id="geofenceCooldownLowSeconds" type="number" min="5" step="5" value="180">
+                </div>
+              </div>
+              <div class="status-line" id="geofenceStatus">Geofence: disabled</div>
+            </div>
+            <div id="caseMap" class="map"></div>
+          </div>
         </div>
-        <div>
-          <label for="geofenceCooldownMediumSeconds">Medium Cooldown (seconds)</label>
-          <input id="geofenceCooldownMediumSeconds" type="number" min="5" step="5" value="90">
-        </div>
-        <div>
-          <label for="geofenceCooldownLowSeconds">Low Cooldown (seconds)</label>
-          <input id="geofenceCooldownLowSeconds" type="number" min="5" step="5" value="180">
-        </div>
-      </div>
-      <div class="status-line" id="geofenceStatus">Geofence: disabled</div>
-      <div id="caseMap" class="map"></div>
+      </article>
+
+      <footer class="scene-footer">
+        <div>Janam uses a cinematic scroll flow to reduce visual noise and highlight the operational picture.</div>
+        <nav>
+          <a href="/">Landing</a>
+          <a href="/docs/deployment.md">Deployment</a>
+          <a href="/docs/code-compliance.md">Code Compliance</a>
+        </nav>
+      </footer>
     </section>
   </main>
 
@@ -262,6 +767,38 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
+  <script>
+    const consoleJump = document.getElementById('consoleJump')
+    if (consoleJump) {
+      consoleJump.addEventListener('change', () => {
+        const value = consoleJump.value
+        if (!value) return
+        if (value.startsWith('#')) {
+          const target = document.querySelector(value)
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else {
+          window.location.assign(value)
+        }
+        consoleJump.value = ''
+      })
+    }
+
+    const scenes = document.querySelectorAll('[data-scene]')
+    if ('IntersectionObserver' in window && scenes.length > 0) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            scenes.forEach((scene) => scene.classList.remove('is-active'))
+            entry.target.classList.add('is-active')
+          }
+        })
+      }, { threshold: 0.45 })
+
+      scenes.forEach((scene) => observer.observe(scene))
+    } else {
+      scenes.forEach((scene) => scene.classList.add('is-active'))
+    }
+  </script>
   <script type="module" src="/demos/janam.js"></script>
 </body>
 </html>

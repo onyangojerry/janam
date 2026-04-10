@@ -1,5 +1,7 @@
 FROM nginx:1.27-alpine
 
 COPY frontend/pages /usr/share/nginx/html
+COPY frontend/site_image_data /usr/share/nginx/html/site_image_data
+COPY docs /usr/share/nginx/html/docs
 
 EXPOSE 80
